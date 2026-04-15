@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>홍북초 종합 스토리보드 시뮬레이터 (와이드 액션판)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 폰트 및 아이콘 추가 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
+        .font-jua { font-family: 'Jua', sans-serif; }
+
+        /* 무대 셋업 (와이드형) */
+        .stage {
+            perspective: 1000px;
+            border: 12px solid #1e293b;
+            border-bottom: 24px solid #0f172a;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
+            background-color: #87CEEB; 
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* 동적 배경 레이어 */
+        #bg-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            transition: all 0.5s ease;
+        }
+
+        /* 씬별 배경 디자인 (CSS Art) */
+        .bg-entrance { background: linear-gradient(to bottom, #e0f2fe 50%, #fde68a 50%); }
+        .bg-entrance::before { content: '🏫 홍북초등학교'; position: absolute; top: 30px; left: 50%; transform: translateX(-50%); font-family: 'Jua'; font-size: 34px; color: #1e3a8a; background: white; padding: 5px 30px; border-radius: 20px; border: 4px solid #bfdbfe; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .bg-entrance::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 250px; height: 180px; border: 5px solid #93c5fd; border-bottom: none; background: rgba(255,255,255,0.6); border-radius: 12px 12px 0 0; }
+
+        .bg-classroom { background: linear-gradient(to bottom, #fef3c7 60%, #d1fae5 60%); }
+        .bg-classroom::before { content: '오늘의 배움: 존중과 배려'; position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 60%; height: 120px; background: #064e3b; color: white; border: 10px solid #b45309; font-family: 'Jua'; font-size: 28px; display: flex; align-items: center; justify-content: center; border-radius: 10px; box-shadow: inset 0 0 15px rgba(0,0,0,0.6); }
+
+        .bg-hallway { background: linear-gradient(to bottom, #ffedd5 50%, #f8fafc 50%); }
+        .bg-hallway::before { content: ''; position: absolute; top: 50px; left: 15%; width: 180px; height: 140px; background: #bae6fd; border: 6px solid #94a3b8; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
+        .bg-hallway::after { content: ''; position: absolute; top: 50px; right: 15%; width: 180px; height: 140px; background: #bae6fd; border: 6px solid #94a3b8; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
+
+        .bg-stage { background: linear-gradient(to bottom, #2e1065 40%, #c084fc 40%); }
+        .bg-stage::before { content: ''; position: absolute; top: 0; left: 0; width: 150px; height: 100%; background: #9f1239; box-shadow: 15px 0 30px rgba(0,0,0,0.6); border-right: 5px solid #be123c; }
+        .bg-stage::after { content: ''; position: absolute; top: 0; right: 0; width: 150px; height: 100%; background: #9f1239; box-shadow: -15px 0 30px rgba(0,0,0,0.6); border-left: 5px solid #be123c; }
+
+        .bg-playground { background: linear-gradient(to bottom, #bae6fd 45%, #86efac 45%); }
+        .bg-playground::before { content: '🌳'; position: absolute; top: 120px; left: 80px; font-size: 130px; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.2)); }
+        .bg-playground::after { content: '🌳'; position: absolute; top: 120px; right: 80px; font-size: 130px; filter: drop-shadow(0 10px 5px rgba(0,0,0,0.2)); }
+
+        /* 캐릭터 및 이모지 */
+        .char {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 90px;
+            height: 110px;
+            z-index: 20;
+            transform-origin: bottom center;
+        }
+        .emoji {
+            font-size: 65px;
+            line-height: 1;
+            filter: drop-shadow(3px 6px 6px rgba(0,0,0,0.3));
+            transition: transform 0.3s ease;
+        }
+
+        /* 말풍선 상세화 */
+        .bubble {
+            position: absolute;
+            top: -65px;
+            background: #ffffff;
+            border: 3px solid #3b82f6;
+            padding: 8px 16px;
+            border-radius: 18px;
+            font-size: 18px;
+            font-weight: 900;
+            color: #1e3a8a;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            white-space: nowrap;
+            z-index: 50;
+            pointer-events: none;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        .bubble::after {
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            border-width: 10px 10px 0; border-style: solid; border-color: #3b82f6 transparent transparent transparent;
+        }
+
+        /* 장소 표시 배지 */
+        #location-badge {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 애니메이션 */
+        @keyframes dance { 0%, 100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-15deg) translateY(-15px); } 75% { transform: rotate(15deg) translateY(-15px); } }
+        @keyframes jump { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-50px) scaleY(1.1); } }
+        @keyframes tiptoe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px) rotate(5deg); } }
+        @keyframes wobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(20deg); } 75% { transform: rotate(-20deg); } }
+        @keyframes flyin { 0% { transform: translate(-300px, -300px) rotate(-45deg); opacity:0; } 100% { transform: translate(0, 0) rotate(0deg); opacity:1; } }
+        
+        .anim-dance .emoji { animation: dance 0.8s infinite; }
+        .anim-jump .emoji { animation: jump 0.6s infinite; }
+        .anim-tiptoe { animation: tiptoe 1s infinite; }
+        .anim-wobble .emoji { animation: wobble 0.8s infinite; }
+        .anim-fly { animation: flyin 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        /* 소품 */
+        .prop { position: absolute; opacity: 0; transition: all 0.5s; z-index: 15; pointer-events: none; }
+        .btn-scene.active { background-color: #3b82f6 !important; color: white !important; transform: scale(1.02); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4); border-color: #2563eb; }
+
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col items-center">
+
+    <div class="w-full max-w-6xl">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-blue-900 mb-6 font-jua text-center">🎬 종합 스토리보드 시뮬레이터 (와이드판)</h1>
+
+        <div class="flex flex-col gap-6">
+            
+            <!-- 상단: 와이드 메인 스테이지 -->
+            <div class="stage h-[500px] rounded-3xl w-full">
+                <!-- 장소 표시 배지 -->
+                <div id="location-badge" class="absolute top-6 left-6 z-50 bg-slate-900/85 text-white font-jua px-5 py-3 rounded-full text-2xl shadow-xl border-2 border-white/20 backdrop-blur-sm flex items-center gap-3">
+                    <i class="fa-solid fa-location-dot text-red-400"></i> <span id="location-text">장소를 선택하세요</span>
+                </div>
+
+                <!-- 동적 배경 -->
+                <div id="bg-layer" class="bg-entrance"></div>
+
+                <!-- 소품들 -->
+                <div id="prop-garland" class="prop top-6 left-1/2 transform -translate-x-1/2 flex gap-4 font-jua text-4xl z-10">
+                    <span class="bg-red-400 text-white px-5 py-3 rounded-xl shadow-lg transform -rotate-2">다</span>
+                    <span class="bg-orange-400 text-white px-5 py-3 rounded-xl shadow-lg transform rotate-2">함</span>
+                    <span class="bg-yellow-400 text-gray-800 px-5 py-3 rounded-xl shadow-lg transform -rotate-1">께</span>
+                    <span class="bg-green-400 text-white px-5 py-3 rounded-xl shadow-lg transform rotate-3">지</span>
+                    <span class="bg-blue-400 text-white px-5 py-3 rounded-xl shadow-lg transform -rotate-2">켜</span>
+                    <span class="bg-indigo-400 text-white px-5 py-3 rounded-xl shadow-lg transform rotate-1">요</span>
+                </div>
+                
+                <!-- 교실 의자 -->
+                <div id="prop-desks" class="prop flex gap-16 top-[320px] left-1/2 transform -translate-x-1/2 z-10 text-7xl">
+                    🪑 🪑 🪑 🪑
+                </div>
+
+                <div id="prop-sketchbook" class="prop top-[140px] left-1/2 transform -translate-x-1/2 bg-white border-8 border-yellow-400 p-6 rounded-3xl shadow-2xl z-40 text-center">
+                    <p id="sketchbook-text" class="font-jua text-5xl text-blue-800">고운말 쓰기!</p>
+                </div>
+
+                <div id="prop-eraser" class="prop text-8xl drop-shadow-2xl z-40">🧽</div>
+                <div id="prop-phone" class="prop text-5xl z-40">📱</div>
+
+                <!-- 캐릭터 6명 -->
+                <div id="c1" class="char"><div class="bubble"></div><div class="emoji">👧🏻</div></div>
+                <div id="c2" class="char"><div class="bubble"></div><div class="emoji">👦🏽</div></div>
+                <div id="c3" class="char"><div class="bubble"></div><div class="emoji">👧🏼</div></div>
+                <div id="c4" class="char"><div class="bubble"></div><div class="emoji">👦🏻</div></div>
+                <div id="c5" class="char"><div class="bubble"></div><div class="emoji">👧🏽</div></div>
+                <div id="c6" class="char"><div class="bubble"></div><div class="emoji">👦🏼</div></div>
+
+                <!-- 블랙아웃 오버레이 (엔딩용) -->
+                <div id="blackout" class="absolute inset-0 bg-black opacity-0 pointer-events-none transition-opacity duration-2000 z-50 flex items-center justify-center">
+                    <span id="end-text" class="text-white font-jua text-6xl opacity-0 transition-opacity duration-1000">The End</span>
+                </div>
+            </div>
+
+            <!-- 하단: 컨트롤 및 설명 패널 (2단 그리드) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- 버튼 목록 (좌측) -->
+                <div class="lg:col-span-1 bg-white p-5 rounded-3xl shadow-lg border-t-8 border-blue-500 flex flex-col gap-3 h-[450px] overflow-y-auto">
+                    <h3 class="font-jua text-2xl text-blue-800 border-b-2 border-blue-100 pb-3 mb-2 flex items-center gap-2"><i class="fa-solid fa-clapperboard"></i> 씬(Scene) 선택</h3>
+                    <div id="btn-container" class="flex flex-col gap-2"></div>
+                    <button onclick="autoPlayAll()" id="btn-autoplay" class="mt-auto bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-md font-jua text-xl transition-transform hover:scale-105">
+                        ▶️ 전체 자동 재생 (1~11)
+                    </button>
+                </div>
+
+                <!-- 자막/설명 패널 (우측) -->
+                <div class="lg:col-span-2 bg-slate-800 text-white p-8 rounded-3xl shadow-xl flex flex-col justify-center">
+                    <div class="flex justify-between items-end border-b-2 border-slate-600 pb-4 mb-6">
+                        <h2 id="info-title" class="text-4xl font-jua text-yellow-400">씬을 선택해주세요</h2>
+                        <span id="info-time" class="text-xl font-bold text-gray-300 bg-slate-700 px-4 py-2 rounded-full border border-slate-500">0:00 ~ 0:00</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-lg">
+                        <div class="bg-slate-700 p-6 rounded-2xl border-l-4 border-pink-400 shadow-inner">
+                            <p class="font-bold text-pink-300 mb-3 font-jua text-2xl"><i class="fa-solid fa-music"></i> 가사 / 오디오</p>
+                            <p id="info-audio" class="text-gray-100 leading-relaxed font-medium text-lg">대기 중...</p>
+                        </div>
+                        
+                        <div class="bg-slate-700 p-6 rounded-2xl border-l-4 border-blue-400 shadow-inner">
+                            <p class="font-bold text-blue-300 mb-3 font-jua text-2xl"><i class="fa-solid fa-video"></i> 감독 연출 지시 (동선)</p>
+                            <p id="info-desc" class="text-gray-100 leading-relaxed font-medium text-lg">좌측 버튼을 눌러 시뮬레이션을 시작하세요.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 기본 셋업
+        const chars = Array.from({length: 6}, (_, i) => document.getElementById(`c${i+1}`));
+        const props = {
+            garland: document.getElementById('prop-garland'),
+            desks: document.getElementById('prop-desks'),
+            sketchbook: document.getElementById('prop-sketchbook'),
+            sbText: document.getElementById('sketchbook-text'),
+            eraser: document.getElementById('prop-eraser'),
+            phone: document.getElementById('prop-phone'),
+            blackout: document.getElementById('blackout'),
+            endText: document.getElementById('end-text')
+        };
+        const bgLayer = document.getElementById('bg-layer');
+        const locBadge = document.getElementById('location-badge');
+        const locText = document.getElementById('location-text');
+        
+        let timers = [];
+        let autoPlayTimer = null;
+
+        // 중앙 기준 X 좌표 (스테이지가 와이드하므로 중앙 좌표를 500~550 근처로 상정)
+        // 화면 크기에 상관없이 픽셀 이동이 자연스럽게 보이도록 좌우 여백을 넓게 사용
+
+        // 유틸리티 함수
+        function t(fn, delay) { timers.push(setTimeout(fn, delay)); }
+        
+        async function clearAll() {
+            timers.forEach(clearTimeout); timers = [];
+            clearTimeout(autoPlayTimer);
+            chars.forEach(c => {
+                c.style.transition = 'none'; c.className = 'char'; c.style.opacity = 0;
+                c.style.transform = 'scale(1)'; c.style.zIndex = 20;
+                const b = c.querySelector('.bubble');
+                b.style.opacity = 0; b.style.transform = 'scale(0)';
+                c.querySelector('.emoji').innerText = getBaseEmoji(c.id);
+            });
+            Object.values(props).forEach(p => { 
+                if(p.id !== 'sketchbook-text' && p.id !== 'end-text') { p.style.opacity = 0; p.style.transition = 'none'; }
+            });
+            props.endText.style.opacity = 0;
+            bgLayer.className = ''; 
+            return new Promise(res => setTimeout(res, 50));
+        }
+
+        function getBaseEmoji(id) {
+            const map = {c1:'👧🏻', c2:'👦🏽', c3:'👧🏼', c4:'👦🏻', c5:'👧🏽', c6:'👦🏼'};
+            return map[id];
+        }
+
+        // 액션 제어 함수
+        function setBg(className) { bgLayer.className = className; }
+        
+        function setChar(id, x, y, options={}) {
+            const c = document.getElementById(id);
+            c.style.left = x + 'px'; c.style.top = y + 'px';
+            c.style.opacity = options.opacity !== undefined ? options.opacity : 1;
+            if(options.scale) c.style.transform = `scale(${options.scale})`;
+            if(options.flip) c.querySelector('.emoji').style.transform = 'scaleX(-1)';
+            else c.querySelector('.emoji').style.transform = 'scaleX(1)';
+        }
+        
+        function moveChar(id, x, y, time=1000, options={}) {
+            const c = document.getElementById(id);
+            c.style.transition = `all ${time}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            c.style.left = x + 'px'; c.style.top = y + 'px';
+            c.style.opacity = 1;
+            if(options.scale) c.style.transform = `scale(${options.scale})`;
+            if(options.flip) c.querySelector('.emoji').style.transform = 'scaleX(-1)';
+        }
+        
+        function say(id, text, dur=2500) {
+            const b = document.getElementById(id).querySelector('.bubble');
+            b.innerText = text; 
+            b.style.opacity = 1; 
+            b.style.transform = 'scale(1)';
+            t(() => { b.style.opacity = 0; b.style.transform = 'scale(0)'; }, dur);
+        }
+        
+        function anim(id, name) { document.getElementById(id).classList.add('anim-' + name); }
+        function stopAnim(id, name) { document.getElementById(id).classList.remove('anim-' + name); }
+        
+        function showProp(propName, x, y, opacity=1, time=500) {
+            const p = props[propName];
+            p.style.transition = `all ${time}ms`;
+            if(x !== null) p.style.left = x + 'px';
+            if(y !== null) p.style.top = y + 'px';
+            p.style.opacity = opacity;
+        }
+
+        // 씬 연출 데이터 (와이드 모드용 X좌표 재설계: 넓은 공간 활용)
+        const scenes = [
+            { // 1
+                title: "1. 오프닝", location: "학교 현관", time: "0:00 ~ 0:15", audio: "🎵 (경쾌한 피아노 반주)",
+                desc: "화면 양옆과 바닥 아래에 숨어있던 아이들이 까꿍! 하며 얼굴을 내밉니다. 그 후 우르르 가운데로 모여 환하게 손을 흔들며 점프합니다.",
+                action: () => {
+                    setBg('bg-entrance');
+                    // 가장자리에 넓게 숨김
+                    setChar('c1', -100, 250); setChar('c2', 1200, 250); setChar('c3', 400, 550); 
+                    setChar('c4', -100, 150); setChar('c5', 1200, 150); setChar('c6', 600, 550);
+                    
+                    // 까꿍 (얼굴만 빼꼼)
+                    t(() => { 
+                        moveChar('c1', 20, 250, 500); moveChar('c2', 1000, 250, 500, {flip:true}); moveChar('c3', 400, 400, 500);
+                        moveChar('c4', 20, 150, 500); moveChar('c5', 1000, 150, 500, {flip:true}); moveChar('c6', 600, 400, 500);
+                        chars.forEach(c => anim(c.id, 'wobble')); 
+                        say('c1', '까꿍!', 1500); say('c2', '안녕!', 1500);
+                    }, 500);
+                    
+                    // 중앙 집결 (와이드 스테이지 중앙은 약 500~600)
+                    t(() => {
+                        chars.forEach(c => stopAnim(c.id, 'wobble'));
+                        moveChar('c1', 350, 280); moveChar('c2', 450, 280); moveChar('c3', 550, 280);
+                        moveChar('c4', 650, 280); moveChar('c5', 400, 200); moveChar('c6', 600, 200);
+                    }, 2500);
+
+                    // 환영 점프
+                    t(() => {
+                        chars.forEach(c => anim(c.id, 'jump'));
+                        say('c3', '홍북초에 온 걸 환영해!! 🎉', 3000);
+                        say('c4', '우리 같이 놀자! 😆', 3000);
+                    }, 3500);
+                }
+            },
+            { // 2
+                title: "2. 인사와 고운 말", location: "학교 복도", time: "0:15 ~ 0:30", audio: "🎤 아침에 만나면 환하게 인사해~ 욕설과 비난은 절대 안 돼!",
+                desc: "양쪽에서 두 그룹이 다가와 배꼽 인사 후 하이파이브를 합니다. 나쁜 말 가사가 나올 땐 팔로 X표를 만들고, 커다란 스케치북이 등장합니다.",
+                action: () => {
+                    setBg('bg-hallway');
+                    // 좌우 분리 대기
+                    setChar('c1', -100, 280); setChar('c2', -250, 280); setChar('c3', -400, 280);
+                    setChar('c4', 1200, 280, {flip: true}); setChar('c5', 1350, 280, {flip: true}); setChar('c6', 1500, 280, {flip: true});
+                    
+                    // 다가오기
+                    t(() => {
+                        moveChar('c1', 400, 280); moveChar('c2', 250, 280); moveChar('c3', 100, 280);
+                        moveChar('c4', 600, 280, 1000, {flip:true}); moveChar('c5', 750, 280, 1000, {flip:true}); moveChar('c6', 900, 280, 1000, {flip:true});
+                    }, 500);
+                    
+                    // 인사 및 하이파이브
+                    t(() => { 
+                        anim('c1', 'wobble'); anim('c4', 'wobble'); 
+                        say('c1', '좋은 아침이야! 👋'); say('c4', '반가워 친구야! 🙌'); 
+                    }, 1800);
+                    
+                    // X표 및 스케치북 팝업
+                    t(() => {
+                        ['c1','c2','c3','c4','c5','c6'].forEach(id => { stopAnim(id, 'wobble'); anim(id, 'jump'); });
+                        say('c2', '욕설은 절대 ❌'); say('c5', '나쁜 말 금지! 🙅');
+                        props.sbText.innerText = "예쁜 말 쓰기 약속!";
+                        showProp('sketchbook', null, 80, 1);
+                    }, 3800);
+                }
+            },
+            { // 3
+                title: "3. 수업 태도", location: "3학년 1반 교실", time: "0:30 ~ 0:45", audio: "🎤 수업 종 울리면 자리에 앉아요~ 스마트폰은 잠시 가방 속에 쏙!",
+                desc: "학생들이 뛰어와 책상 의자에 앉습니다. 한 친구가 폰을 몰래 꺼내려 하자 옆 짝꿍이 단호하게 폰을 압수해 가방에 넣으라고 지시합니다.",
+                action: () => {
+                    setBg('bg-classroom');
+                    showProp('desks', null, 300, 1, 0); // 의자 미리 세팅
+                    
+                    // 학생들 후다닥 착석
+                    setChar('c1', -100, 350); setChar('c2', -50, 400); setChar('c3', 1200, 350); setChar('c4', 1250, 400);
+                    t(() => {
+                        // 중앙기준 넓게 배치
+                        moveChar('c1', 260, 250, 800); moveChar('c2', 420, 250, 800); 
+                        moveChar('c3', 580, 250, 800); moveChar('c4', 740, 250, 800);
+                    }, 500);
+                    
+                    // c2가 폰을 꺼냄
+                    t(() => {
+                        showProp('phone', 450, 220, 1);
+                        say('c2', '몰래 게임 한 판만.. 📱', 2000);
+                    }, 1800);
+
+                    // c3가 제지함
+                    t(() => {
+                        showProp('phone', 450, 270, 0, 300); // 폰 치움
+                        document.getElementById('c2').querySelector('.emoji').innerText = '😲';
+                        say('c3', '안돼! 가방에 넣어! 🎒', 2500);
+                        anim('c3', 'wobble');
+                    }, 4000);
+                }
+            },
+            { // 4
+                title: "4. 선생님 존중", location: "3학년 1반 교실 앞", time: "0:45 ~ 0:57", audio: "🎤 선생님은 우리를 사랑으로~ 생활지도를 믿고 존중하며 따라요",
+                desc: "선생님 역을 맡은 아이 주변으로 학생들이 둥글게 모여 일제히 최고(엄지척) 포즈를 취하고, 선생님은 하트를 날립니다.",
+                action: () => {
+                    setBg('bg-classroom');
+                    
+                    // c1이 선생님 역할 (중앙)
+                    setChar('c1', 500, 250, {scale: 1.2}); 
+                    document.getElementById('c1').querySelector('.emoji').innerText = '👩🏻‍🏫';
+                    
+                    // 학생들이 반원형태로 모여들기
+                    setChar('c2', -100, 350); setChar('c3', -50, 300); setChar('c4', -150, 250);
+                    setChar('c5', 1200, 350); setChar('c6', 1150, 300);
+                    
+                    t(() => {
+                        moveChar('c2', 250, 320); moveChar('c3', 350, 280); 
+                        moveChar('c5', 750, 320); moveChar('c6', 650, 280);
+                        moveChar('c4', 450, 360); // 앞쪽
+                    }, 500);
+                    
+                    t(() => {
+                        ['c2','c3','c4','c5','c6'].forEach(id => {
+                            anim(id, 'jump');
+                            say(id, '👍 선생님 최고!!', 2000);
+                        });
+                        say('c1', '너희들을 사랑해~ ❤️', 3000);
+                        anim('c1', 'wobble');
+                    }, 1500);
+                }
+            },
+            { // 5
+                title: "5. 메인 안무", location: "학교 강당 (무대)", time: "0:57 ~ 1:16", audio: "🎤 다 함께 지켜요, 홍북초 생활규칙! 안전하게 보호받는 행복한 우리 학교",
+                desc: "6명의 학생이 일렬로 완벽하게 정렬합니다. 위에서 8글자 대형 가랜드가 내려오고, 딱 맞춘 군무(칼군무)를 시작합니다.",
+                action: () => {
+                    setBg('bg-stage');
+                    // 가랜드 하강
+                    showProp('garland', null, -100, 1, 0); 
+                    t(() => showProp('garland', null, 40, 1, 1000), 100);
+
+                    // 일렬 정대 및 율동 (넓게 퍼짐)
+                    for(let i=0; i<6; i++) {
+                        setChar(`c${i+1}`, -100, 300);
+                        t(() => moveChar(`c${i+1}`, 180 + i*130, 300, 1000), 500);
+                    }
+                    
+                    t(() => { 
+                        chars.forEach(c => anim(c.id, 'dance')); 
+                        say('c3', '다 함께 칼군무!! 🕺', 3000);
+                    }, 1600);
+                }
+            },
+            { // 6
+                title: "6. 간주 (막춤/놀이)", location: "야외 운동장", time: "1:16 ~ 1:33", audio: "🎵 (신나는 리듬의 드럼과 신디사이저 간주)",
+                desc: "술래가 무궁화 꽃이 피었습니다 놀이를 합니다. 친구들이 까치발로 몰래 다가가다 술래가 돌아보면 얼음! 자세를 취합니다.",
+                action: () => {
+                    setBg('bg-playground');
+                    
+                    setChar('c6', 900, 250, {flip: true}); // 술래 (오른쪽 끝)
+                    for(let i=1; i<=5; i++) setChar(`c${i}`, i*50, 280);
+                    
+                    t(() => {
+                        say('c6', '무궁화 꽃이~ 🌸', 2000);
+                        for(let i=1; i<=5; i++) {
+                            moveChar(`c${i}`, 200 + i*80, 280, 2000);
+                            anim(`c${i}`, 'tiptoe');
+                        }
+                    }, 500);
+
+                    t(() => {
+                        say('c6', '피었습니다! 👁️', 2000);
+                        document.getElementById('c6').querySelector('.emoji').style.transform = 'scaleX(1)'; // 뒤돌아봄
+                        document.getElementById('c6').querySelector('.emoji').innerText = '😎'; // 매의 눈
+                        
+                        for(let i=1; i<=5; i++) {
+                            const char = document.getElementById(`c${i}`);
+                            char.style.transition = 'none'; // 얼음!
+                            stopAnim(`c${i}`, 'tiptoe');
+                            if(i===3) say('c3', '헉! 얼음! 🧊', 2000);
+                        }
+                    }, 2600);
+                }
+            },
+            { // 7
+                title: "7. 쉬는 시간", location: "학교 복도", time: "1:33 ~ 1:48", audio: "🎤 신나는 쉬는 시간, 복도에선 사뿐사뿐~",
+                desc: "한 친구가 뛰어가려 하자 두 친구가 다급히 붙잡아 '쉿!' 합니다. 그 후 셋이서 아주 과장되게 까치발을 들고 복도를 걸어갑니다.",
+                action: () => {
+                    setBg('bg-hallway');
+                    
+                    setChar('c1', -50, 280); setChar('c2', -150, 280); setChar('c3', -250, 280);
+                    
+                    // c1이 뛰어감
+                    t(() => { 
+                        moveChar('c1', 500, 280, 600); 
+                        say('c1', '우와아! 나 잡아봐라!! 🏃‍♂️💨', 2000); 
+                    }, 500);
+                    
+                    // c2, c3가 쫓아가서 제지
+                    t(() => {
+                        moveChar('c2', 400, 280, 400); moveChar('c3', 300, 280, 400);
+                        say('c2', '쉿! 조용히! 🤫', 2000);
+                        say('c3', '복도에선 뛰면 안돼!', 2000);
+                    }, 1200);
+                    
+                    // 같이 사뿐사뿐 걷기 (우측으로 끝까지)
+                    t(() => {
+                        document.getElementById('c1').querySelector('.emoji').innerText = '😅';
+                        anim('c1', 'tiptoe'); anim('c2', 'tiptoe'); anim('c3', 'tiptoe');
+                        moveChar('c1', 1100, 280, 4000); moveChar('c2', 1000, 280, 4000); moveChar('c3', 900, 280, 4000);
+                        say('c1', '미안.. 사뿐사뿐~ 🐾', 2000);
+                    }, 3500);
+                }
+            },
+            { // 8
+                title: "8. 물건 배려", location: "3학년 1반 교실", time: "1:48 ~ 2:03", audio: "🎤 물건을 빌릴 땐 '빌려줘'~ 돌려줄 땐 '고마워'",
+                desc: "지우개가 없어 슬퍼하는 친구에게, 다른 친구가 하늘에서 슈퍼맨처럼 날아와 거대한 지우개를 빌려줍니다.",
+                action: () => {
+                    setBg('bg-classroom');
+                    
+                    setChar('c1', 400, 280); 
+                    document.getElementById('c1').querySelector('.emoji').innerText = '😢';
+                    t(() => say('c1', '아앗.. 지우개가 없어 ㅠㅠ', 2500), 500);
+
+                    // 슈퍼맨 등장 (멀리서)
+                    t(() => {
+                        const c2 = document.getElementById('c2');
+                        c2.style.left = '1000px'; c2.style.top = '-100px'; c2.style.opacity = 1;
+                        c2.classList.add('anim-fly'); // 하늘에서 날아옴
+                        say('c2', '얍! 슈퍼맨 출동! 🦸‍♂️', 2500);
+                    }, 1500);
+
+                    // 지우개 등장 및 환호
+                    t(() => {
+                        document.getElementById('c2').classList.remove('anim-fly');
+                        setChar('c2', 550, 280, {flip: true}); // 착지
+                        
+                        showProp('eraser', 480, 220, 1);
+                        document.getElementById('c1').querySelector('.emoji').innerText = '😍';
+                        say('c1', '우와 정말 고마워!! ✨', 2500); 
+                        
+                        anim('c1', 'jump'); anim('c2', 'jump');
+                    }, 2600);
+                }
+            },
+            { // 9
+                title: "9. 다짐과 약속", location: "학교 복도", time: "2:13 ~ 2:44", audio: "🎤 때로는 실수하고 규칙을 깜빡할 수도~ 약속해, 나부터 먼저 실천할게!",
+                desc: "규칙을 어겨 시무룩한 친구에게 친구들이 다가가 어깨를 토닥입니다. 다 함께 기운을 내서 파이팅을 외치며 다짐 스케치북을 듭니다.",
+                action: () => {
+                    setBg('bg-hallway');
+                    
+                    setChar('c1', 500, 300, {scale: 0.85});
+                    document.getElementById('c1').querySelector('.emoji').innerText = '😔';
+                    t(() => say('c1', '실수했어.. 미안해...', 2500), 500);
+
+                    setChar('c2', -50, 300); setChar('c3', 1150, 300);
+                    
+                    t(() => {
+                        moveChar('c2', 380, 300); moveChar('c3', 620, 300, 1000, {flip:true});
+                        say('c2', '괜찮아! 누구나 실수해', 2500); say('c3', '토닥토닥~ 다음엔 잘하자!', 2500);
+                    }, 1500);
+
+                    t(() => {
+                        document.getElementById('c1').querySelector('.emoji').innerText = '😃';
+                        setChar('c1', 500, 300, {scale: 1}); // 원래 크기 복귀
+                        
+                        ['c1','c2','c3'].forEach(id => say(id, '으쌰으쌰 파이팅!! 💪', 2500));
+                        props.sbText.innerText = "나부터 먼저 지킬게!";
+                        showProp('sketchbook', null, 80, 1);
+                        
+                        ['c1','c2','c3'].forEach(id => anim(id, 'jump'));
+                    }, 4000);
+                }
+            },
+            { // 10
+                title: "10. 클라이맥스", location: "학교 강당 (무대)", time: "2:44 ~ 2:58", audio: "🎤 다 함께 지켜요, 홍북초 생활규칙!",
+                desc: "가장 에너지가 넘치는 구간. 아이들이 카메라 바로 앞까지 다가와 (크게 확대됨) 신나게 단체 안무를 춥니다.",
+                action: () => {
+                    setBg('bg-stage');
+                    // 시작 위치 (뒤쪽)
+                    for(let i=0; i<6; i++) setChar(`c${i+1}`, 150 + i*130, 200, {scale: 0.8});
+                    
+                    t(() => {
+                        // 카메라 쪽으로 돌진하며 커짐
+                        for(let i=0; i<6; i++) moveChar(`c${i+1}`, 80 + i*160, 350, 1200, {scale: 1.5});
+                        
+                        say('c2', '홍북초 최고!! 🎉', 3000); 
+                        say('c5', '규칙 지키면 행복해!! 💖', 3000);
+                    }, 500);
+
+                    t(() => {
+                        chars.forEach(c => anim(c.id, 'dance'));
+                    }, 1700);
+                }
+            },
+            { // 11
+                title: "11. 엔딩", location: "학교 현관", time: "2:58 ~ 3:04", audio: "🎤 반짝반짝 빛나는 홍북초등학교 우리 함께 손잡고 만들어가요~",
+                desc: "서로 꼭 붙어 손을 잡고 인사합니다. 서서히 화면이 암전되며 'The End' 텍스트가 나타납니다.",
+                action: () => {
+                    setBg('bg-entrance');
+                    // 중앙 기준으로 빽빽하게 모이기
+                    for(let i=0; i<6; i++) setChar(`c${i+1}`, 300 + i*75, 300, {scale: 1.1});
+                    
+                    t(() => {
+                        chars.forEach(c => anim(c.id, 'wobble'));
+                        say('c3', '모두 안녕~!! 👋', 3000); 
+                        say('c4', '학교에서 만나!! 🏫', 3000);
+                    }, 800);
+
+                    // 페이드 아웃 및 엔딩 텍스트
+                    t(() => {
+                        props.blackout.style.opacity = 1; 
+                    }, 2500);
+                    t(() => {
+                        props.endText.style.opacity = 1; 
+                    }, 3500);
+                }
+            }
+        ];
+
+        // UI 버튼 생성
+        const btnContainer = document.getElementById('btn-container');
+        scenes.forEach((scene, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-scene bg-slate-50 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl text-left border border-slate-300 transition-all font-jua text-xl';
+            btn.innerHTML = `<span class="text-blue-500 mr-2">#${index+1}</span> ${scene.title.substring(scene.title.indexOf('.')+1).trim()}`;
+            btn.onclick = () => playScene(index);
+            btnContainer.appendChild(btn);
+        });
+
+        // 씬 재생 핵심 로직
+        async function playScene(index) {
+            await clearAll(); // 이전 씬의 흔적 완전 지우기
+            
+            // UI 업데이트
+            document.querySelectorAll('.btn-scene').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.btn-scene')[index].classList.add('active');
+
+            const scene = scenes[index];
+            document.getElementById('info-title').innerText = scene.title;
+            document.getElementById('info-time').innerText = scene.time;
+            document.getElementById('info-audio').innerText = scene.audio;
+            document.getElementById('info-desc').innerText = scene.desc;
+
+            // 장소 배지 애니메이션 교체
+            locBadge.classList.remove('scale-100', 'opacity-100');
+            locBadge.classList.add('scale-90', 'opacity-0');
+            setTimeout(() => {
+                locText.innerText = scene.location;
+                locBadge.classList.remove('scale-90', 'opacity-0');
+                locBadge.classList.add('scale-100', 'opacity-100');
+            }, 300);
+
+            // 씬 액션 실행
+            scene.action();
+        }
+
+        // 전체 자동 재생 (간격 여유 있게)
+        async function autoPlayAll() {
+            const btnAuto = document.getElementById('btn-autoplay');
+            btnAuto.disabled = true;
+            btnAuto.classList.add('opacity-50', 'cursor-not-allowed');
+            btnAuto.innerHTML = '⏳ 자동 재생 진행 중...';
+            
+            for(let i=0; i<scenes.length; i++) {
+                playScene(i);
+                await new Promise(resolve => { autoPlayTimer = setTimeout(resolve, 6500); });
+            }
+            
+            btnAuto.disabled = false;
+            btnAuto.classList.remove('opacity-50', 'cursor-not-allowed');
+            btnAuto.innerHTML = '▶️ 전체 자동 재생 (1~11)';
+        }
+
+        // 초기화 시 1번 씬 로드
+        window.onload = () => playScene(0);
+
+    </script>
+</body>
+</html>
